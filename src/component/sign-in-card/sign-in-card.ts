@@ -186,7 +186,7 @@ export class SignInCardComponent {
         .then((res) => {
           this.preferences.putString(PreferenceKey.APP_LOGO, res.logo).toPromise().then();
           this.preferences.putString(PreferenceKey.APP_NAME, title).toPromise().then();
-          (<any>window).splashscreen.setContent(title, res.logo);
+          //(<any>window).splashscreen.setContent(title, res.logo);
           resolve();
         }).catch(() => {
           resolve(); // ignore

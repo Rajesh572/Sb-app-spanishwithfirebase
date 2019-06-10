@@ -36,6 +36,7 @@ import { SbDownloadPopupComponent } from './popups/sb-download-popup/sb-download
 import { SbGenericPopoverComponent } from './popups/sb-generic-popup/sb-generic-popover';
 import { SideMenuComponent } from './side-menu/side-menu';
 import { DirectivesModule } from '@app/directives/directives.module';
+import { ModalcomponentComponent } from './modalcomponent/modalcomponent.component';
 
 @NgModule({
     declarations: [
@@ -67,7 +68,8 @@ import { DirectivesModule } from '@app/directives/directives.module';
         ReportIssuesComponent,
         SbDownloadPopupComponent,
         SbGenericPopoverComponent,
-        SideMenuComponent
+        SideMenuComponent,
+        ModalcomponentComponent
     ],
     imports: [
         IonicPageModule.forChild(CourseCard),
@@ -109,7 +111,8 @@ import { DirectivesModule } from '@app/directives/directives.module';
         SbPopoverComponent,
         SbDownloadPopupComponent,
         SbGenericPopoverComponent,
-        SideMenuComponent
+        SideMenuComponent,
+        ModalcomponentComponent
 
     ],
     entryComponents: [
@@ -123,7 +126,8 @@ import { DirectivesModule } from '@app/directives/directives.module';
         ApplicationHeaderComponent,
         SbPopoverComponent,
         SbDownloadPopupComponent,
-        SbGenericPopoverComponent
+        SbGenericPopoverComponent,
+        ModalcomponentComponent
     ],
     providers: [
         FormAndFrameworkUtilService

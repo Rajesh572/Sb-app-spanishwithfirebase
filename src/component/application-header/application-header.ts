@@ -4,6 +4,7 @@ import { CommonUtilService, AppGlobalService, UtilityService } from '@app/servic
 import { SharedPreferences } from 'sunbird-sdk';
 import { PreferenceKey, GenericAppConfig } from '../../app/app.constant';
 import { AppVersion } from '@ionic-native/app-version';
+import { FcmProvider } from '../../providers/fcm/fcm'
 
 @Component({
   selector: 'application-header',
@@ -27,7 +28,8 @@ export class ApplicationHeaderComponent implements OnInit {
     private events: Events,
     private appGlobalService: AppGlobalService,
     private appVersion: AppVersion,
-    private utilityService: UtilityService) {
+    private utilityService: UtilityService,
+    private fcm:FcmProvider) {
     this.setLanguageValue();
     this.events.subscribe('onAfterLanguageChange:update', (res) => {
       if (res && res.selectedLanguage) {
@@ -99,6 +101,18 @@ export class ApplicationHeaderComponent implements OnInit {
   emitSideMenuItemEvent($event, menuItem) {
     this.toggleMenu();
     this.sideMenuItemEvent.emit({ menuItem });
+  }
+
+  onSubscribeClick() {
+    console.log('subscribe clicked');
+
+    if(this.fcm.sessionInfo) {
+      console.log('session availlable');
+      this.fcm.registerDevice();
+    }
+    else {
+      console.log('session not available');
+    }
   }
 
 }

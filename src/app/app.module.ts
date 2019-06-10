@@ -33,6 +33,10 @@ import { AndroidPermissionsService } from '@app/service/android-permissions/andr
 import { ComponentsModule } from '@app/component/components.module';
 import { ContainerService } from '@app/service/container.services';
 import { DirectivesModule } from '@app/directives/directives.module';
+import { AngularFireModule } from 'angularfire2';
+import { AngularFirestoreModule } from 'angularfire2/firestore';
+import { Firebase } from '@ionic-native/firebase';
+import { FcmProvider } from '../providers/fcm/fcm';
 
 export const translateHttpLoaderFactory = (httpClient: HttpClient) => {
   return new TranslateHttpLoader(httpClient, './assets/i18n/', '.json');
@@ -272,6 +276,15 @@ export const sunbirdSdkFactory =
       });
     };
   };
+  const config = {
+    apiKey: "AIzaSyA0hGxhY9uIRi0wkx235MiCj7XbQX7obmo",
+    authDomain: "sma-camino-8844e.firebaseapp.com",
+    databaseURL: "https://sma-camino-8844e.firebaseio.com",
+    projectId: "sma-camino-8844e",
+    storageBucket: "sma-camino-8844e.appspot.com",
+    messagingSenderId: "139647454017",
+    appId: "1:139647454017:web:cac53d944b1fd854"
+  }
 
 @NgModule({
   declarations: [
@@ -298,7 +311,9 @@ export const sunbirdSdkFactory =
     }),
     IonicImageLoader.forRoot(),
     ...PluginModules,
-    DirectivesModule
+    DirectivesModule,
+    AngularFireModule.initializeApp(config),
+    AngularFirestoreModule
   ],
   bootstrap: [
     IonicApp
@@ -330,9 +345,11 @@ export const sunbirdSdkFactory =
     AppHeaderService,
     Device,
     AndroidPermissionsService,
+    Firebase,
     ...sunbirdSdkServicesProvidersFactory(),
     { provide: ErrorHandler, useClass: IonicErrorHandler },
-    { provide: APP_INITIALIZER, useFactory: sunbirdSdkFactory, deps: [], multi: true }
+    { provide: APP_INITIALIZER, useFactory: sunbirdSdkFactory, deps: [], multi: true },
+    FcmProvider
   ],
   exports: [
     BroadcastComponent

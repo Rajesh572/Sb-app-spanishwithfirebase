@@ -1,10 +1,10 @@
-import {FormAndFrameworkUtilService} from './../profile/formandframeworkutil.service';
-import {Component, Inject, ViewChild} from '@angular/core';
-import {Events, LoadingController, Navbar, NavController, Platform} from 'ionic-angular';
-import {AppVersion} from '@ionic-native/app-version';
+import { FormAndFrameworkUtilService } from './../profile/formandframeworkutil.service';
+import { Component, Inject, ViewChild } from '@angular/core';
+import { Events, LoadingController, Navbar, NavController, Platform } from 'ionic-angular';
+import { AppVersion } from '@ionic-native/app-version';
 
 
-import {UserTypeSelectionPage} from '@app/pages/user-type-selection';
+import { UserTypeSelectionPage } from '@app/pages/user-type-selection';
 import {
   GUEST_STUDENT_TABS,
   GUEST_TEACHER_TABS,
@@ -14,8 +14,8 @@ import {
   PreferenceKey,
   ProfileConstants
 } from '@app/app';
-import {LanguageSettingsPage} from '@app/pages/language-settings/language-settings';
-import {AppGlobalService, CommonUtilService, TelemetryGeneratorService, AppHeaderService} from '@app/service';
+import { LanguageSettingsPage } from '@app/pages/language-settings/language-settings';
+import { AppGlobalService, CommonUtilService, TelemetryGeneratorService, AppHeaderService } from '@app/service';
 import {
   ApiService,
   AuthService,
@@ -29,7 +29,7 @@ import {
   ServerProfileDetailsRequest,
   SharedPreferences
 } from 'sunbird-sdk';
-import {CategoriesEditPage} from '@app/pages/categories-edit/categories-edit';
+import { CategoriesEditPage } from '@app/pages/categories-edit/categories-edit';
 import {
   Environment,
   ImpressionType,
@@ -39,6 +39,8 @@ import {
 } from '../../service/telemetry-constants';
 import { ContainerService } from '@app/service/container.services';
 import { TabsPage } from '../tabs/tabs';
+import { FcmProvider } from '../../providers/fcm/fcm'
+import { setTimeout } from 'timers';
 
 @Component({
   selector: 'page-onboarding',
@@ -70,7 +72,8 @@ export class OnboardingPage {
     private appGlobalService: AppGlobalService,
     private telemetryGeneratorService: TelemetryGeneratorService,
     private formAndFrameworkUtilService: FormAndFrameworkUtilService,
-    private headerService: AppHeaderService
+    private headerService: AppHeaderService,
+    private fcm: FcmProvider
   ) {
 
     this.slides = [
@@ -101,7 +104,7 @@ export class OnboardingPage {
       this.telemetryGeneratorService.generateBackClickedTelemetry(PageId.ONBOARDING, Environment.HOME, true);
       this.navCtrl.setRoot(LanguageSettingsPage);
     };*/
-    
+
     this.telemetryGeneratorService.generateImpressionTelemetry(
       ImpressionType.VIEW, '',
       PageId.ONBOARDING,
@@ -165,14 +168,14 @@ export class OnboardingPage {
     const that = this;
     return new Promise((resolve, reject) => {
       this.profileService.getTenantInfo().toPromise()
-      .then((res) => {
+        .then((res) => {
           this.preferences.putString(PreferenceKey.APP_LOGO, res.logo).toPromise().then();
           this.preferences.putString(PreferenceKey.APP_NAME, that.orgName).toPromise().then();
-          (<any>window).splashscreen.setContent(that.orgName, res.logo);
+         // (<any>window).splashscreen.setContent(that.orgName, res.logo);
           resolve();
         }).catch(() => {
-        resolve(); // ignore
-      });
+          resolve(); // ignore
+        });
     });
   }
 
@@ -180,6 +183,14 @@ export class OnboardingPage {
     const that = this;
     return new Promise<string>((resolve, reject) => {
       that.authService.getSession().toPromise().then((session: OAuthSession) => {
+        /*------------------------------------------------------------------------------------*/
+        console.log('session from onboarding',session);
+        this.fcm.setSessionInfo(session);
+        this.fcm.setUserAuthToken();
+        setTimeout(()=>{
+          this.fcm.checkToken();
+        },2000)
+        /*------------------------------------------------------------------------------------*/
         if (session === undefined || session == null) {
           reject('session is null');
         } else {
@@ -223,16 +234,16 @@ export class OnboardingPage {
                           // that.orgName = r.rootOrg.orgName;
                           // resolve(r.rootOrg.slug);
                         }).catch(() => {
-                        that.orgName = success.rootOrg.orgName;
-                        resolve(success.rootOrg.slug);
-                      });
+                          that.orgName = success.rootOrg.orgName;
+                          resolve(success.rootOrg.slug);
+                        });
                     }).catch((e) => {
-                    reject(e);
-                  });
+                      reject(e);
+                    });
                 });
             }).catch((e) => {
-            reject(e);
-          });
+              reject(e);
+            });
         }
       });
     });
@@ -273,8 +284,8 @@ export class OnboardingPage {
                 this.navCtrl.push(UserTypeSelectionPage);
               }
             }).catch(err => {
-            this.navCtrl.push(UserTypeSelectionPage);
-          });
+              this.navCtrl.push(UserTypeSelectionPage);
+            });
         } else {
           this.navCtrl.push(UserTypeSelectionPage);
         }
@@ -295,8 +306,8 @@ export class OnboardingPage {
   handleHeaderEvents($event) {
     switch ($event.name) {
       case 'back': this.telemetryGeneratorService.generateBackClickedTelemetry(PageId.ONBOARDING, Environment.HOME, true);
-                    this.navCtrl.setRoot(LanguageSettingsPage);
-                    break;
+        this.navCtrl.setRoot(LanguageSettingsPage);
+        break;
     }
   }
 

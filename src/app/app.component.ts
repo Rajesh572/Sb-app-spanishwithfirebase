@@ -1,7 +1,7 @@
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { ProfileSettingsPage } from './../pages/profile-settings/profile-settings';
 import { AfterViewInit, Component, Inject, NgZone, ViewChild, OnInit, EventEmitter } from '@angular/core';
-import { App, Events, Nav, Platform, PopoverController, ToastController, ViewController, NavControllerBase } from 'ionic-angular';
+import { App, Events, Nav, Platform, PopoverController, ToastController, ViewController, NavControllerBase, ModalController, AlertController, Button } from 'ionic-angular';
 import { StatusBar } from '@ionic-native/status-bar';
 import { GUEST_STUDENT_TABS, GUEST_TEACHER_TABS, initTabs, LOGIN_TEACHER_TABS } from './module.service';
 import { LanguageSettingsPage } from '../pages/language-settings/language-settings';
@@ -48,6 +48,7 @@ import { CoursesPage } from '@app/pages/courses/courses';
 import { ProfilePage } from '@app/pages/profile/profile';
 import { CollectionDetailsEtbPage } from '@app/pages/collection-details-etb/collection-details-etb';
 import { QrCodeResultPage } from '@app/pages/qr-code-result';
+import { FcmProvider } from '../providers/fcm/fcm'
 
 @Component({
   templateUrl: 'app.html',
@@ -59,6 +60,7 @@ import { QrCodeResultPage } from '@app/pages/qr-code-result';
 export class MyApp implements OnInit, AfterViewInit {
   @ViewChild(Nav) nav;
   rootPage: any;
+  profileData;
   public counter = 0;
   headerConfig = {
     showHeader: true,
@@ -104,7 +106,9 @@ export class MyApp implements OnInit, AfterViewInit {
     private splashscreenImportActionHandlerDelegate: SplashscreenImportActionHandlerDelegate,
     private headerServie: AppHeaderService,
     private logoutHandlerService: LogoutHandlerService,
-    private network: Network
+    private network: Network,
+    private alertController: AlertController,
+    private fcm: FcmProvider
   ) {
     this.telemetryAutoSyncUtil = new TelemetryAutoSyncUtil(this.telemetryService);
     platform.ready().then(async () => {
@@ -133,20 +137,29 @@ export class MyApp implements OnInit, AfterViewInit {
       this.statusBar.styleBlackTranslucent();
       this.handleBackButton();
     });
-  }
 
+     this.fcm.onNotifications().subscribe((msg) => {
+      console.log('msg from notification', msg);
+      const toast = this.toastCtrl.create({
+        message: msg.body,
+        duration: 2000,
+        position: "top",
+      });
+      toast.present();
+    });
+  }
   /**
 	 * Angular life cycle hooks
 	 */
   ngOnInit() {
     this.headerServie.headerConfigEmitted$.subscribe(config => {
-      this.headerConfig = config;
+      this.headerConfig = config; console.log('headerconfig',this.headerConfig);
     });
 
     this.commonUtilService.networkAvailability$.subscribe((available: boolean) => {
       const navObj: NavControllerBase = this.app.getActiveNavs()[0];
-        const activeView: ViewController = navObj.getActive();
-        const pageId: string = this.computePageId((<any>activeView).instance);
+      const activeView: ViewController = navObj.getActive();
+      const pageId: string = this.computePageId((<any>activeView).instance);
       if (available) {
         this.addNetworkTelemetry(InteractSubtype.INTERNET_CONNECTED, pageId);
       } else {
@@ -157,11 +170,11 @@ export class MyApp implements OnInit, AfterViewInit {
 
   addNetworkTelemetry(subtype: string, pageId: string) {
     this.telemetryGeneratorService.generateInteractTelemetry(InteractType.OTHER,
-        subtype,
-        Environment.HOME,
-        pageId, undefined
+      subtype,
+      Environment.HOME,
+      pageId, undefined
     );
-}
+  }
   ngAfterViewInit(): void {
     this.platform.resume.subscribe(() => {
       this.telemetryGeneratorService.generateInterruptTelemetry('resume', '');
@@ -197,7 +210,7 @@ export class MyApp implements OnInit, AfterViewInit {
     const value = new Map();
     value['network-type'] = this.network.type;
     this.telemetryGeneratorService.generateInteractTelemetry(InteractType.OTHER,
-      InteractSubtype.NETWORK_STATUS, Environment.HOME, PageId.SPLASH_SCREEN, undefined, value) ;
+      InteractSubtype.NETWORK_STATUS, Environment.HOME, PageId.SPLASH_SCREEN, undefined, value);
   }
   computePageId(page): string {
     let pageId = '';
@@ -209,15 +222,15 @@ export class MyApp implements OnInit, AfterViewInit {
       pageId = PageId.PROFILE;
     } else if (page instanceof GuestProfilePage) {
       pageId = PageId.GUEST_PROFILE;
-    }  else if (page instanceof CollectionDetailsEtbPage) {
+    } else if (page instanceof CollectionDetailsEtbPage) {
       pageId = PageId.COLLECTION_DETAIL;
-  } else if (page instanceof ContentDetailsPage) {
+    } else if (page instanceof ContentDetailsPage) {
       pageId = PageId.CONTENT_DETAIL;
-  } else if (page instanceof QrCodeResultPage) {
+    } else if (page instanceof QrCodeResultPage) {
       pageId = PageId.DIAL_CODE_SCAN_RESULT;
-  } else if (page instanceof CollectionDetailsPage) {
+    } else if (page instanceof CollectionDetailsPage) {
       pageId = PageId.COLLECTION_DETAIL;
-  }
+    }
     return pageId;
   }
 
@@ -319,6 +332,17 @@ export class MyApp implements OnInit, AfterViewInit {
 
   private async navigateToAppropriatePage() {
     const session = await this.authService.getSession().toPromise();
+
+/*------------------------------------------------------------------------------------*/
+    if (session) {
+      this.fcm.setSessionInfo(session);
+      this.fcm.setUserAuthToken();
+      setTimeout(()=>{
+        this.fcm.checkToken();
+      },2000)
+    }
+/*------------------------------------------------------------------------------------*/
+
     console.log(`Platform Session`, session);
     if (!session) {
       console.log(`Success Platform Session`, session);
@@ -380,6 +404,8 @@ export class MyApp implements OnInit, AfterViewInit {
         requiredFields: ProfileConstants.REQUIRED_FIELDS
       }).toPromise()
         .then(async (profile: any) => {
+          console.log('profile details', profile);
+          this.profileData = profile;
           if (profile
             && profile.syllabus && profile.syllabus[0]
             && profile.board && profile.board.length
@@ -395,9 +421,11 @@ export class MyApp implements OnInit, AfterViewInit {
                 userId: session.userToken,
                 requiredFields: ProfileConstants.REQUIRED_FIELDS,
               }).toPromise();
-
               this.commonUtilService
                 .showToast(this.commonUtilService.translateMessage('WELCOME_BACK', serverProfile.firstName));
+              /*alert for registering device registering */
+              console.log('serverprofile from app.component :', serverProfile);
+              /*alert for registering device*/
             }
 
             this.rootPage = TabsPage;
@@ -642,7 +670,7 @@ export class MyApp implements OnInit, AfterViewInit {
         || ((<any>activeView).instance instanceof ContentDetailsPage)
         || ((<any>activeView).instance instanceof OnboardingPage)
         || ((<any>activeView).instance instanceof QrCodeResultPage)
-        ) {
+      ) {
         this.headerServie.sidebarEvent($event);
         return;
       }
